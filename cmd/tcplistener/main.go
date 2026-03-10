@@ -29,6 +29,9 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 				curLine = strings[1]
 			}
 		}
+		if len(curLine) > 0 {
+			ch <- string(curLine)
+		}
 	}()
 	return ch
 
@@ -44,7 +47,7 @@ func main() {
 		if err != nil {
 			log.Fatal("error", err)
 		}
-		fmt.Println("message accepted")
+		fmt.Printf("message accepted\n")
 		lines := getLinesChannel(conn)
 		for line := range lines {
 			fmt.Printf("read: %s\n", line)
