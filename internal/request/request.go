@@ -53,7 +53,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing the buffer")
 		}
-		// TODO: implement buffer resizing when max capacity exceeded
+		// TODO: implement buffer resizing when maximum capacity exceeded
 
 	}
 
