@@ -60,4 +60,14 @@ func TestHeaderParsing(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, 0, n)
 	assert.False(t, done)
+
+	// Test: Valid repeated header
+	// headers = NewHeaders()
+	// data = []byte("Site-ID: MLA\r\nSite-ID: MLB\r\n\r\n")
+	// n, done, err = headers.Parse(data)
+	// require.NoError(t, err)
+	// require.NotNil(t, headers)
+	// assert.Equal(t, "MLA, MLB", headers.Get("Site-ID"))
+	// assert.Equal(t, 23, n)
+	// assert.False(t, done)
 }

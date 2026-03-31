@@ -26,6 +26,10 @@ func (h *Headers) Get(key string) string {
 }
 
 func (h *Headers) Set(key string, val string) {
+	if val, ok := h.headers[key]; ok {
+		h.headers[key] = h.headers[key] + ", " + val
+		return
+	}
 	h.headers[strings.ToLower(key)] = val
 }
 
@@ -52,8 +56,8 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	if key != strings.TrimSpace(key) || !match {
 		return 0, false, fmt.Errorf("invalid header name")
 	}
-
 	val = strings.TrimSpace(val)
+
 	h.Set(key, val)
 
 	return i + len(CRLF), false, nil
