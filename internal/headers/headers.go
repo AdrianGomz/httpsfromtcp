@@ -11,10 +11,22 @@ const (
 	CRLF = "\r\n"
 )
 
-type Headers map[string]string
+type Headers struct {
+	headers map[string]string
+}
 
-func NewHeaders() Headers {
-	return Headers{}
+func NewHeaders() *Headers {
+	return &Headers{
+		headers: map[string]string{},
+	}
+}
+
+func (h *Headers) Get(key string) string {
+	return h.headers[strings.ToLower(key)]
+}
+
+func (h *Headers) Set(key string, val string) {
+	h.headers[strings.ToLower(key)] = val
 }
 
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
@@ -42,6 +54,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	}
 
 	val = strings.TrimSpace(val)
-	h[key] = strings.ToLower(val)
+	h.Set(key, val)
+
 	return i + len(CRLF), false, nil
 }
