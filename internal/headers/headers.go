@@ -21,6 +21,10 @@ func NewHeaders() *Headers {
 	}
 }
 
+func (h *Headers) HeadersMap() map[string]string {
+	return h.headers
+}
+
 func (h *Headers) Get(key string) string {
 	return h.headers[strings.ToLower(key)]
 }
@@ -59,6 +63,5 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	val = strings.TrimSpace(val)
 
 	h.Set(key, val)
-
 	return i + len(CRLF), false, nil
 }

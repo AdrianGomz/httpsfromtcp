@@ -3,6 +3,7 @@ package request
 import (
 	"errors"
 	"fmt"
+	"http/internal/headers"
 	"io"
 	"regexp"
 	"strings"
@@ -17,6 +18,7 @@ type parserState string
 
 const (
 	Initialized parserState = "initialized"
+	Headers     parserState = "headers"
 	Done        parserState = "done"
 )
 
@@ -28,30 +30,37 @@ type RequestLine struct {
 
 type Request struct {
 	RequestLine RequestLine
-	Headers     map[string]string
+	Headers     headers.Headers
 	Body        []byte
 	State       parserState
 }
 
 func NewRequest() *Request {
-	return &Request{State: Initialized}
+	return &Request{
+		State:   Initialized,
+		Headers: *headers.NewHeaders(),
+	}
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	request := NewRequest()
 	buffer := make([]byte, 1024)
 	b_insert_idx := 0
+	b_read_idx := 0
 	for request.State != Done {
 		n, err := reader.Read(buffer[b_insert_idx:])
 		if err != nil {
-			return nil, err
+			if !(err == io.EOF && b_read_idx != b_insert_idx) {
+				return nil, err
+			}
 		}
 
 		b_insert_idx += n
 
-		_, err = request.parse(buffer[:b_insert_idx+n])
+		parsed, err := request.parse(buffer[b_read_idx : b_insert_idx+n])
+		b_read_idx += parsed
 		if err != nil {
-			return nil, fmt.Errorf("error parsing the buffer")
+			return nil, fmt.Errorf("error parsing the buffer: %s", err)
 		}
 		// TODO: implement buffer resizing when maximum capacity exceeded
 
@@ -62,27 +71,47 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 }
 
 func (r *Request) parse(data []byte) (int, error) {
-	switch r.State {
-	case Initialized:
-		rl, n, err := parseRequestLine(string(data))
-		if err != nil {
-			return 0, err
+	read := 0
+parsing:
+	for {
+		switch r.State {
+		case Initialized:
+			rl, n, err := parseRequestLine(string(data[read:]))
+			if err != nil {
+				return 0, err
+			}
+
+			if n == 0 {
+				return 0, nil
+			} else if n > 0 && rl != nil {
+				r.RequestLine = *rl
+				r.State = Headers
+				read += n
+
+			}
+		case Headers:
+			n, done, err := r.Headers.Parse(data[read:])
+			if err != nil {
+				return read, err
+			}
+
+			if n == 0 {
+				return read, nil
+			}
+			if done {
+				r.State = Done
+				break parsing
+			}
+			read += n
+
+		case Done:
+			return 0, fmt.Errorf("Request already done")
+
+		default:
+			return 0, fmt.Errorf("Unknown request state")
 		}
-
-		if n == 0 {
-			return 0, nil
-		} else if n > 0 && rl != nil {
-			r.RequestLine = *rl
-			r.State = Done
-		}
-		return n, nil
-
-	case Done:
-		return 0, fmt.Errorf("Request already done")
-
-	default:
-		return 0, fmt.Errorf("Unknown request state")
 	}
+	return read, nil
 }
 
 func parseRequestLine(ms string) (*RequestLine, int, error) {
@@ -111,6 +140,6 @@ func parseRequestLine(ms string) (*RequestLine, int, error) {
 		Method:        parts[0],
 		RequestTarget: parts[1],
 		HttpVersion:   parts[2][5:],
-	}, len(ms), nil
+	}, len(ln) + len(SEPARATOR), nil
 
 }
