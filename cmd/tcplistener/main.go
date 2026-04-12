@@ -32,6 +32,7 @@ func main() {
 		for header, val := range r.Headers.HeadersMap() {
 			fmt.Println(header, val)
 		}
+		fmt.Println("Body", string(r.Body))
 	}
 
 }

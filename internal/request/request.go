@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"http/internal/headers"
 	"io"
+	"log"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -19,6 +21,7 @@ type parserState string
 const (
 	Initialized parserState = "initialized"
 	Headers     parserState = "headers"
+	Body        parserState = "body"
 	Done        parserState = "done"
 )
 
@@ -72,7 +75,6 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 func (r *Request) parse(data []byte) (int, error) {
 	read := 0
-parsing:
 	for {
 		switch r.State {
 		case Initialized:
@@ -89,6 +91,7 @@ parsing:
 				read += n
 
 			}
+
 		case Headers:
 			n, done, err := r.Headers.Parse(data[read:])
 			if err != nil {
@@ -99,11 +102,22 @@ parsing:
 				return read, nil
 			}
 			if done {
-				r.State = Done
-				break parsing
+				r.State = Body
 			}
 			read += n
 
+		case Body:
+			contentlnStr := r.Headers.Get("Content-Length")
+			contentln, err := strconv.Atoi(contentlnStr)
+			if err != nil {
+				log.Fatal("Invalid content len")
+			}
+			body, n, done := parseRequestBody(data[read:read+contentln], contentln)
+			if done {
+				r.Body = body
+				r.State = Done
+			}
+			return n, nil
 		case Done:
 			return 0, fmt.Errorf("Request already done")
 
@@ -111,7 +125,13 @@ parsing:
 			return 0, fmt.Errorf("Unknown request state")
 		}
 	}
-	return read, nil
+}
+
+func parseRequestBody(data []byte, contentLen int) (body []byte, n int, done bool) {
+	if len(data) == contentLen {
+		return data, contentLen, true
+	}
+	return []byte{}, 0, false
 }
 
 func parseRequestLine(ms string) (*RequestLine, int, error) {
