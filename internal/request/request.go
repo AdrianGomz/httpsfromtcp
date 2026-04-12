@@ -119,7 +119,7 @@ func (r *Request) parse(data []byte) (int, error) {
 			}
 			return n, nil
 		case Done:
-			return 0, fmt.Errorf("Request already done")
+			return read, nil
 
 		default:
 			return 0, fmt.Errorf("Unknown request state")
@@ -130,6 +130,9 @@ func (r *Request) parse(data []byte) (int, error) {
 func (r *Request) getContentLength() int {
 
 	contentlnStr := r.Headers.Get("Content-Length")
+	if contentlnStr == "" {
+		return 0
+	}
 	contentlen, err := strconv.Atoi(contentlnStr)
 	if err != nil {
 		log.Fatal("Invalid content len")
