@@ -102,17 +102,17 @@ func (r *Request) parse(data []byte) (int, error) {
 				return read, nil
 			}
 			if done {
-				r.State = Body
+				if r.getContentLength() == 0 {
+					r.State = Done
+				} else {
+					r.State = Body
+				}
 			}
 			read += n
 
 		case Body:
-			contentlnStr := r.Headers.Get("Content-Length")
-			contentln, err := strconv.Atoi(contentlnStr)
-			if err != nil {
-				log.Fatal("Invalid content len")
-			}
-			body, n, done := parseRequestBody(data[read:read+contentln], contentln)
+			contentlen := r.getContentLength()
+			body, n, done := parseRequestBody(data[read:read+contentlen], contentlen)
 			if done {
 				r.Body = body
 				r.State = Done
@@ -125,6 +125,16 @@ func (r *Request) parse(data []byte) (int, error) {
 			return 0, fmt.Errorf("Unknown request state")
 		}
 	}
+}
+
+func (r *Request) getContentLength() int {
+
+	contentlnStr := r.Headers.Get("Content-Length")
+	contentlen, err := strconv.Atoi(contentlnStr)
+	if err != nil {
+		log.Fatal("Invalid content len")
+	}
+	return contentlen
 }
 
 func parseRequestBody(data []byte, contentLen int) (body []byte, n int, done bool) {
