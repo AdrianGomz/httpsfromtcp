@@ -18,6 +18,7 @@ func main() {
 		if err != nil {
 			log.Fatal("error", err)
 		}
+
 		r, err := request.RequestFromReader(conn)
 		if err != nil {
 			log.Fatal("error getting request")
